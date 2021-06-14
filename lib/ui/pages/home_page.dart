@@ -6,9 +6,8 @@ import 'package:http/http.dart' as http;
 import 'package:connectivity/connectivity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:track_player_dota_2/constants/base_url.dart';
 import 'package:track_player_dota_2/ui/pages/detail_page.dart';
-
-const PLAYER_BASE_URL = 'https://api.opendota.com/api/players/';
 
 class HomePage extends StatefulWidget {
   HomePage({Key? key}) : super(key: key);
@@ -145,8 +144,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future getPlayerDetail(String playerId) async {
-    var playerJson = await http.get(Uri.parse(PLAYER_BASE_URL + playerId));
+    // @note: get player profile
+    var playerJson =
+        await http.get(Uri.parse(BaseURL.PLAYER_BASE_URL + playerId));
     var player = json.decode(playerJson.body);
+
     if (!player.containsKey('profile')) {
       setState(() {
         showLoading = false;
@@ -154,7 +156,22 @@ class _HomePageState extends State<HomePage> {
         _playerValidateMessage = 'Player ID not found';
       });
     } else {
-      // navigate to detail page
+      // @note: get player win-lose
+      setState(() {
+        showLoading = false;
+      });
+      var playerWLJson =
+          await http.get(Uri.parse(BaseURL.PLAYER_BASE_URL + playerId + '/wl'));
+      var playerWL = json.decode(playerWLJson.body);
+
+      // @note: get player recentMatches
+      var playerRecentMatchesJson = await http.get(
+          Uri.parse(BaseURL.PLAYER_BASE_URL + playerId + '/recentMatches'));
+      var playerRecentMatches = json.decode(playerRecentMatchesJson.body);
+
+      player["win_lose"] = playerWL;
+      player["recent_matches"] = playerRecentMatches;
+      // @note: navigate to detail page
       Navigator.of(context).push(MaterialPageRoute(
           builder: (context) => DetailPage(playerData: player)));
     }

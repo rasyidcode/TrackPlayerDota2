@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:track_player_dota_2/constants/base_url.dart';
 import 'package:track_player_dota_2/models/player.dart';
-
-const RANK_ASSET_URL =
-    'https://www.opendota.com/assets/images/dota2/rank_icons/';
+import 'package:track_player_dota_2/models/recent_match.dart';
+import 'package:track_player_dota_2/ui/widgets/match_item.dart';
 
 class DetailPage extends StatefulWidget {
   final Map playerData;
@@ -13,14 +13,22 @@ class DetailPage extends StatefulWidget {
   _DetailPageState createState() => _DetailPageState();
 }
 
-class _DetailPageState extends State<DetailPage> {
+class _DetailPageState extends State<DetailPage> with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  TabController? tabController;
+
   Player player = Player();
 
   @override
   void initState() {
     super.initState();
+    tabController = TabController(length: 3, vsync: this);
     player = Player.fromJson(widget.playerData);
+
+    for (Map match in widget.playerData['recent_matches']) {
+      player.recentMatches.add(RecentMatch.fromMap(match));
+    }
   }
 
   @override
@@ -78,7 +86,7 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               SizedBox(height: 5.0),
                               Text(
-                                '0',
+                                player.winLose.win.toString(),
                                 style: TextStyle(
                                   color: Colors.green,
                                   fontSize: 12.0,
@@ -95,7 +103,7 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               SizedBox(height: 5.0),
                               Text(
-                                '0',
+                                player.winLose.lose.toString(),
                                 style: TextStyle(
                                   color: Colors.red,
                                   fontSize: 12.0,
@@ -112,7 +120,11 @@ class _DetailPageState extends State<DetailPage> {
                               ),
                               SizedBox(height: 5.0),
                               Text(
-                                ((100 / (100 + 50)) * 100).toStringAsFixed(2) +
+                                ((player.winLose.win /
+                                                (player.winLose.win +
+                                                    player.winLose.lose)) *
+                                            100)
+                                        .toStringAsFixed(2) +
                                     '%',
                                 style: TextStyle(
                                   color: Colors.white,
@@ -156,11 +168,40 @@ class _DetailPageState extends State<DetailPage> {
                 ],
               ),
             ),
-            IconButton(
-                onPressed: () {
-                  print('fuck you');
-                },
-                icon: Icon(Icons.ac_unit))
+            SizedBox(height: 5.0),
+            TabBar(
+              isScrollable: true,
+              controller: tabController,
+              tabs: <Widget>[
+                Tab(
+                  text: 'Recent Match',
+                ),
+                Tab(
+                  text: 'Most Played',
+                ),
+                Tab(
+                  text: 'Words Used',
+                ),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: tabController,
+                children: [
+                  ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    itemCount: player.recentMatches.length,
+                    itemBuilder: (context, index) {
+                      return MatchItemWidget(
+                        recentMatch: player.recentMatches[index],
+                      );
+                    },
+                  ),
+                  Container(),
+                  Container(),
+                ],
+              ),
+            )
           ],
         ),
       ),
@@ -170,8 +211,8 @@ class _DetailPageState extends State<DetailPage> {
   Map getRankTierAssetURL() {
     String rank = player.rankTier.toString();
 
-    String rankUrl = RANK_ASSET_URL + 'rank_icon_' + rank[0] + '.png';
-    String rankStar = RANK_ASSET_URL + 'rank_star_' + rank[1] + '.png';
+    String rankUrl = BaseURL.RANK_ASSET_URL + 'rank_icon_' + rank[0] + '.png';
+    String rankStar = BaseURL.RANK_ASSET_URL + 'rank_star_' + rank[1] + '.png';
     String rankName = '';
 
     switch (rank[0]) {
@@ -230,4 +271,6 @@ class _DetailPageState extends State<DetailPage> {
       'rank_name': rankName,
     };
   }
+
+  // game_mode.json
 }
