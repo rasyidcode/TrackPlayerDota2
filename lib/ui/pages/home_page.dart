@@ -7,6 +7,7 @@ import 'package:connectivity/connectivity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:track_player_dota_2/constants/base_url.dart';
+import 'package:track_player_dota_2/models/dota_hero.dart';
 import 'package:track_player_dota_2/ui/pages/detail_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -31,6 +32,22 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     initConnectivity().then((status) => {checkingConnection(status)});
+  }
+
+  Future<DotaHero> getHero(int heroId) async {
+    const assetPath = BaseURL.ODOTA_CONSTANT_URL + 'heroes.json';
+    try {
+      final jsonString = await http.get(Uri.parse(assetPath));
+      final Map result = json.decode(jsonString.body);
+
+      if (result.containsKey("$heroId")) {
+        final DotaHero hero = DotaHero.fromJson(result["$heroId"]);
+        return hero;
+      }
+      return DotaHero();
+    } catch (e) {
+      return DotaHero();
+    }
   }
 
   @override
@@ -104,7 +121,7 @@ class _HomePageState extends State<HomePage> {
                     : Container()
               ],
             ),
-          )
+          ),
         ],
       ),
     );

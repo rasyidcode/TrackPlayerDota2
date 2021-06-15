@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:html';
+import 'package:http/http.dart' as http;
 
 import 'package:track_player_dota_2/constants/base_url.dart';
-import 'package:track_player_dota_2/models/hero.dart';
+import 'package:track_player_dota_2/models/dota_hero.dart';
+import 'package:track_player_dota_2/models/game_mode.dart';
+import 'package:track_player_dota_2/models/lobby_type.dart';
 
 class RecentMatch {
   final int matchId;
@@ -61,13 +63,37 @@ class RecentMatch {
         deaths = map['deaths'],
         assists = map['assists'];
 
-  Future<Hero> getHero() async {
+  Future<DotaHero> getHero() async {
     const assetPath = BaseURL.ODOTA_CONSTANT_URL + 'heroes.json';
     try {
-      final jsonString = await HttpRequest.getString(assetPath);
-      return Hero.fromJson(json.decode(jsonString)["${this.heroId}"]);
+      final jsonString = await http.get(Uri.parse(assetPath));
+      final Map result = json.decode(jsonString.body);
+
+      if (result.containsKey("${this.heroId}")) {
+        final DotaHero hero = DotaHero.fromJson(result["${this.heroId}"]);
+        return hero;
+      }
+      return DotaHero();
     } catch (e) {
-      return Hero();
+      return DotaHero();
+    }
+  }
+
+  Future<Map> getGameMode() async {
+    const gameModeAssetPath = BaseURL.ODOTA_CONSTANT_URL + 'game_mode.json';
+    const lobbyTypeAssetPath = BaseURL.ODOTA_CONSTANT_URL + 'lobby_type.json';
+    try {
+      final gameModeJsonString = await http.get(Uri.parse(gameModeAssetPath));
+      final lobbyTypeJsonString = await http.get(Uri.parse(lobbyTypeAssetPath));
+
+      return {
+        'game_mode': GameMode.fromJson(
+            json.decode(gameModeJsonString.body)["${this.gameMode}"]),
+        'lobby_type': LobbyType.fromJson(
+            json.decode(lobbyTypeJsonString.body)["${this.lobbyType}"])
+      };
+    } catch (e) {
+      return {'game_mode': null, 'lobby_type': null};
     }
   }
 }

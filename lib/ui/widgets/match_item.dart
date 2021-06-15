@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:track_player_dota_2/constants/base_url.dart';
+import 'package:track_player_dota_2/models/dota_hero.dart';
+import 'package:track_player_dota_2/models/game_mode.dart';
+import 'package:track_player_dota_2/models/lobby_type.dart';
 import 'package:track_player_dota_2/models/recent_match.dart';
 
 class MatchItemWidget extends StatefulWidget {
@@ -13,8 +16,9 @@ class MatchItemWidget extends StatefulWidget {
 
 class _MatchItemWidgetState extends State<MatchItemWidget> {
   var format;
-  RecentMatch? recentMatch;
+  RecentMatch recentMatch = RecentMatch();
   bool playerIsRadiant = false;
+  DotaHero hero = DotaHero();
 
   @override
   void initState() {
@@ -22,8 +26,83 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
     format = DateFormat("d/M/y h:m:s");
     recentMatch = widget.recentMatch;
 
-    if (recentMatch?.playerSlot != null) {}
-    // playerIsRadiant = recentMatch?.playerSlot <= 127 ? true : false;
+    playerIsRadiant = recentMatch.playerSlot <= 127 ? true : false;
+  }
+
+  bool isPlayerWin() {
+    return recentMatch.radiantWin
+        ? playerIsRadiant
+            ? true
+            : false
+        : !playerIsRadiant
+            ? true
+            : false;
+  }
+
+  Widget buildLeftSideWidget(DotaHero hero) {
+    return Container(
+      height: 100.0,
+      width: 60.0,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          CircleAvatar(
+            radius: 27.0,
+            backgroundImage: NetworkImage(
+              BaseURL.STEAM_ASSET_URL + hero.img,
+            ),
+          ),
+          Text(
+            hero.localizedName,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11.0,
+              color: Colors.blue,
+            ),
+          ),
+          Text(
+            isPlayerWin() ? 'WIN' : 'LOSE',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13.0,
+              color: isPlayerWin() ? Colors.green : Colors.red,
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget buildGameModeWidget(Map map) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: 'Type',
+            style: TextStyle(
+              fontSize: 11.0,
+              color: Colors.grey,
+            ),
+          ),
+          TextSpan(
+            text: ' :  ',
+            style: TextStyle(
+              fontSize: 11.0,
+              color: Colors.grey,
+            ),
+          ),
+          TextSpan(text: (map['game_mode'] as GameMode).getRealName()),
+          TextSpan(text: ' '),
+          TextSpan(
+            text: (map['lobby_type'] as LobbyType).getRealName(),
+            style: TextStyle(
+                fontSize: 11.0,
+                fontFamily: 'Do Hyeon',
+                color: Colors.lightBlue),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -35,37 +114,18 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                height: 100.0,
-                width: 60.0,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    CircleAvatar(
-                      radius: 27.0,
-                      backgroundImage: NetworkImage(
-                        BaseURL.STEAM_ASSET_URL +
-                            'apps/dota2/images/heroes/enchantress_full.png',
-                      ),
-                    ),
-                    Text(
-                      'Enchantress',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11.0,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    Text(
-                      'WIN',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13.0,
-                        color: Colors.green,
-                      ),
-                    )
-                  ],
-                ),
+              FutureBuilder<DotaHero>(
+                future: recentMatch.getHero(),
+                builder: (BuildContext context, AsyncSnapshot snapshot) {
+                  if (snapshot.hasError) {
+                    print(snapshot.error);
+                    return Text('Something went wrong');
+                  }
+
+                  return snapshot.hasData
+                      ? buildLeftSideWidget(snapshot.data)
+                      : CircularProgressIndicator();
+                },
               ),
               SizedBox(width: 8.0),
               Expanded(
@@ -87,44 +147,25 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                 width: 10.0,
                               ),
                               Text(
-                                '11111111',
+                                recentMatch.matchId.toString(),
                                 style: TextStyle(
                                   fontSize: 11.0,
                                 ),
                               ),
                             ],
                           ),
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: 'Type',
-                                  style: TextStyle(
-                                    fontSize: 11.0,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' :  ',
-                                  style: TextStyle(
-                                    fontSize: 11.0,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: 'All Pick',
-                                  style: TextStyle(fontSize: 11.0),
-                                ),
-                                TextSpan(text: ' '),
-                                TextSpan(
-                                  text: 'Ranked',
-                                  style: TextStyle(
-                                      fontSize: 11.0,
-                                      fontFamily: 'Do Hyeon',
-                                      color: Colors.lightBlue),
-                                )
-                              ],
-                            ),
+                          FutureBuilder(
+                            future: recentMatch.getGameMode(),
+                            builder:
+                                (BuildContext context, AsyncSnapshot snapshot) {
+                              if (snapshot.hasError) {
+                                return Text('Something went wrong');
+                              }
+
+                              return snapshot.hasData
+                                  ? buildGameModeWidget(snapshot.data)
+                                  : CircularProgressIndicator();
+                            },
                           ),
                           Row(
                             children: <Widget>[
@@ -174,7 +215,7 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                       ),
                                       SizedBox(height: 5.0),
                                       Text(
-                                        11.toString(),
+                                        recentMatch.kills.toString(),
                                         style: TextStyle(
                                           fontSize: 11.0,
                                         ),
@@ -192,7 +233,7 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                       ),
                                       SizedBox(height: 5.0),
                                       Text(
-                                        0.toString(),
+                                        recentMatch.deaths.toString(),
                                         style: TextStyle(
                                           fontSize: 11.0,
                                         ),
@@ -210,7 +251,7 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                       ),
                                       SizedBox(height: 5.0),
                                       Text(
-                                        12.toString(),
+                                        recentMatch.assists.toString(),
                                         style: TextStyle(
                                           fontSize: 11.0,
                                         ),
@@ -232,7 +273,7 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                     ),
                                     SizedBox(height: 5.0),
                                     Text(
-                                      900.toString(),
+                                      recentMatch.gpm.toString(),
                                       style: TextStyle(
                                         fontSize: 11.0,
                                       ),
@@ -251,7 +292,7 @@ class _MatchItemWidgetState extends State<MatchItemWidget> {
                                     ),
                                     SizedBox(height: 5.0),
                                     Text(
-                                      500.toString(),
+                                      recentMatch.xpm.toString(),
                                       style: TextStyle(
                                         fontSize: 11.0,
                                       ),
